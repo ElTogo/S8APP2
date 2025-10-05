@@ -61,15 +61,15 @@ class AlexNet_detect(nn.Module):
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.Conv2d(128, 128, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(128, 16, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
-            nn.Linear(4608, 512),
+            nn.Linear(576, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(512, 512),
+            nn.Linear(256, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(512, SEGMENTATION_BACKGROUND_CLASS*5),
+            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS*5)
             # nn.Sigmoid()
         )
 
@@ -88,10 +88,12 @@ class Loss_Detection(nn.Module):
         self.loss_coord_function = nn.MSELoss(reduction='mean')
 
     def forward(self, x, target):
-        temp = x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])
-        temp2 = target
-        classification_loss = self.loss_class_function(x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])[:,:,0], target[:,:,0].float())
-        coordinate_loss = self.loss_coord_function(x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])[:,:,0:], target[:,:,0:].float())
+        # temp = x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])
+        # temp2 = target
+        # classification_loss = self.loss_class_function(x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])[:,:,0], target[:,:,0].float())
+        # coordinate_loss = self.loss_coord_function(x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])[:,:,0:], target[:,:,0:].float())
+        classification_loss = self.loss_class_function(x[:,:,0], target[:,:,0].float())
+        coordinate_loss = self.loss_coord_function(x[:,:,0:], target[:,:,0:].float())
         return classification_loss * self.lam_class + coordinate_loss * self.lam_coord
 
 
@@ -342,10 +344,10 @@ class ConveyorCnnTrainer():
         if task == 'detection':
             optimizer.zero_grad()
             pred_boxes = model(image)
-            loss = criterion(pred_boxes, boxes)
+            loss = criterion(pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5), boxes)
             loss.backward()
             optimizer.step()
-            probs = torch.sigmoid(pred_boxes)
+            probs = torch.sigmoid(pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5))
             metric.accumulate(probs, boxes)
             self._last_prediction = probs[0]
             return loss
@@ -418,10 +420,16 @@ class ConveyorCnnTrainer():
             loss = criterion(logits, target)
             probs = torch.sigmoid(logits).detach().cpu()
             metric.accumulate(probs, target.detach().cpu())
-
-            # Préparer prediction compatible visualizer : liste de scalaires pour la première image
             self._last_prediction = probs[0].tolist()
             return loss.detach()
+
+        if task == 'detection':
+            pred_boxes = model(image)
+            loss = criterion(pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5), boxes)
+            probs = torch.sigmoid(pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5))
+            metric.accumulate(probs, boxes)
+            self._last_prediction = probs[0]
+            return loss
 
 ##fin modif
 
