@@ -64,7 +64,7 @@ class AlexNet_detect(nn.Module):
             nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True)7,
+            nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
             nn.Linear(512, 256),
