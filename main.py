@@ -75,8 +75,10 @@ class AlexNet_detect(nn.Module):
     def forward(self, x):
         pred =  self.model(x).view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5)
         sig = torch.sigmoid(pred[:,:,:4])
-        relu = torch.relu(pred[:,:,4:]) * 3
+        relu = torch.round(torch.relu(pred[:,:,4:]) * 3)
         return torch.cat((sig, relu), 2)
+
+
 
 ## fin modif
 
@@ -330,18 +332,18 @@ class ConveyorCnnTrainer():
         """
 ## début modif
         if task == 'classification':
-            optimizer.zero_grad()
-            pred_class= model(image)
-            target = class_labels.float()
-            loss = criterion(pred_class, target)
+            optimizer.zero_grad() #TOUJOURS COMMENCER AVEC
+            pred_class= model(image) #on call le réseau
+            target = class_labels.float() #get les target
+            loss = criterion(pred_class, target) #calcule le loss
 
-            loss.backward()
-            optimizer.step()
+            loss.backward() #retro propag
+            optimizer.step() #optimizer +1 epoch
 
-            probs = torch.sigmoid(pred_class)
-            metric.accumulate(probs, target)
+            probs = torch.sigmoid(pred_class) #J'ai pas compris pk mais il le fallais juste là et pas dans le réseau
+            metric.accumulate(probs, target) #On envoie les shit pour calculer les metric
 
-            self._last_prediction = probs[0]
+            self._last_prediction = probs[0] #pour l'affichage
             return loss
 
 
