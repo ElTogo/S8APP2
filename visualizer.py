@@ -104,7 +104,6 @@ class Visualizer:
         ax2.legend(custom_lines, ['Circle', 'Triangle', 'Cross'], loc='center left', bbox_to_anchor=(1, 0.5))
 
         color = ['r', 'g', 'b']
-        print(target)
         for i in range(target.shape[0]):
             pos_x = target[i, 1] * image[0].shape[0]
             pos_y = target[i, 2] * image[0].shape[0]
@@ -113,15 +112,13 @@ class Visualizer:
             rec = patches.RegularPolygon((pos_x, pos_y), 4, orientation=0.78, radius=size, linewidth=2,
                                          edgecolor=color[class_index], facecolor='none')
             ax1.add_patch(rec)
-        print(prediction)
         for i in range(prediction.shape[0]):
             if prediction[i, 0] > self._confidence_threshold:
                 pos_x = prediction[i, 1] * image[0].shape[0]
                 pos_y = prediction[i, 2] * image[0].shape[0]
                 size = prediction[i, 3] * int(0.75 * image[0].shape[0] / 2)
-                print(prediction[i, 4:])
-                print(np.argmax(prediction[i, 4:]))
                 class_index = int(np.argmax(prediction[i, 4:]))
+                # class_index = int(prediction[i, 4:]) ## LIGNE CHANGÉ ################################
                 rec = patches.RegularPolygon((pos_x, pos_y), 4, orientation=0.78, radius=size, linewidth=2,
                                              edgecolor=color[class_index], facecolor='none')
                 ax2.add_patch(rec)
