@@ -53,37 +53,35 @@ class AlexNet_detect(nn.Module):
         super(AlexNet_detect, self).__init__()
         self.model = nn.Sequential(
             # AlexNet comme dans le guide étudiant
-            nn.Conv2d(1, 32, kernel_size=7, stride=1, padding=3),
+            nn.Conv2d(1, 16, kernel_size=9, stride=1, padding=3),
+            nn.ReLU(inplace=True),
+            nn.MaxPool2d(kernel_size=2, stride=2),
+            nn.Conv2d(16, 32, kernel_size=7, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1),
             nn.ReLU(inplace=True),
-            nn.MaxPool2d(kernel_size=2, stride=2),
-            nn.Conv2d(64, 128, kernel_size=3, stride=1, padding=1),
-            nn.ReLU(inplace=True),
-            nn.Conv2d(128, 32, kernel_size=3, stride=1, padding=1),
+            nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
-            nn.Linear(1152, 256),
+            nn.Linear(512, 256),
             nn.ReLU(inplace=True),
             nn.Linear(256, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS*5)
+            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS*7),
+            nn.Sigmoid()
         )
 
     def forward(self, x):
-        pred =  self.model(x).view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5)
-        sig = torch.sigmoid(pred[:,:,:4])
-        relu = torch.round(torch.clamp(pred[:,:,4:]  * 3, min = 0, max = 2))
-        return torch.cat((sig, relu), 2)
+        pred =  self.model(x).view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, 7)
+        # pred2 = torch.clone(pred)
+        # pred2[:,:,4:7] = torch.softmax(pred[:,:,4:7], dim=-1)
+        return pred
 
-
-
-## fin modif
 
 class Loss_Detection(nn.Module):
-    def __init__(self, lam_detect = 1.0, lam_coord = 5.0, lam_class = 2.0):
+    def __init__(self, lam_detect = 3.0, lam_coord = 1.0, lam_class = 2.0):
         super(Loss_Detection, self).__init__()
         self.lam_detect = lam_detect
         self.lam_coord = lam_coord
@@ -97,11 +95,15 @@ class Loss_Detection(nn.Module):
         # temp2 = target
         # classification_loss = self.loss_class_function(x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])[:,:,0], target[:,:,0].float())
         # coordinate_loss = self.loss_coord_function(x.view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, target.shape[2])[:,:,0:], target[:,:,0:].float())
+        target_one_hot = torch.zeros(x.shape[0], x.shape[1], SEGMENTATION_BACKGROUND_CLASS)
+        target_one_hot.scatter_(-1, target[:, :, 4].long().unsqueeze(-1), 1.0)
+
         detection_loss = self.loss_detect_function(x[:,:,0], target[:,:,0].float())
         coordinate_loss = self.loss_coord_function(x[:,:,1:4], target[:,:,1:4].float())
-        classification_loss = self.loss_class_function(x[:,:,4:], target[:,:,4:].float())
+        classification_loss = self.loss_class_function(x[:,:,4:7].permute(0,2,1), target_one_hot)
         return detection_loss * self.lam_detect + coordinate_loss * self.lam_coord + classification_loss * self.lam_class
 
+## fin modif
 
 class ConveyorCnnTrainer():
     def __init__(self, args):
@@ -350,15 +352,18 @@ class ConveyorCnnTrainer():
         if task == 'detection':
             optimizer.zero_grad()
             pred_boxes = model(image)
-            # probs = torch.sigmoid(pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5))
-            probs = pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5)
 
+            detect_onehot = torch.argmax(pred_boxes[:,:,4:7], dim=2)
+            detect_onehot = detect_onehot.unsqueeze(-1)
+            pred_boxes_i = torch.cat((pred_boxes[:,:,:4], detect_onehot), dim=2)
 
-            loss = criterion(probs, boxes)
+            loss = criterion(pred_boxes, boxes)
+            metric.accumulate(pred_boxes, boxes)
             loss.backward()
             optimizer.step()
-            metric.accumulate(probs, boxes)
-            self._last_prediction = probs[0].tolist()
+
+            self._last_prediction = pred_boxes_i[0]
+
             return loss.detach()
 
             # optimizer.zero_grad()
@@ -460,13 +465,13 @@ class ConveyorCnnTrainer():
             # return loss.detach()
 
             pred_boxes = model(image)
+            loss = criterion(pred_boxes, boxes)
+            metric.accumulate(pred_boxes, boxes)
+            detect_onehot = torch.argmax(pred_boxes[:,:,4:7], dim=2)
+            detect_onehot = detect_onehot.unsqueeze(-1)
+            pred_boxes = torch.cat((pred_boxes[:,:,:4], detect_onehot), dim=2)
+            self._last_prediction = pred_boxes[0]
 
-            # probs = torch.sigmoid(pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5))
-            probs = pred_boxes.view(pred_boxes.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5)
-
-            loss = criterion(probs, boxes)
-            metric.accumulate(probs, boxes)
-            self._last_prediction = probs[0].tolist()
             return loss.detach()
 
 ##fin modif
