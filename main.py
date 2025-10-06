@@ -75,7 +75,7 @@ class AlexNet_detect(nn.Module):
     def forward(self, x):
         pred =  self.model(x).view(x.shape[0], SEGMENTATION_BACKGROUND_CLASS, 5)
         sig = torch.sigmoid(pred[:,:,:4])
-        relu = torch.round(torch.relu(pred[:,:,4:]) * 3)
+        relu = torch.round(torch.clamp(pred[:,:,4:]  * 3, min = 0, max = 2))
         return torch.cat((sig, relu), 2)
 
 
