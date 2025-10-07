@@ -27,17 +27,26 @@ class AlexNet_class(nn.Module):
         self.model = nn.Sequential(
             # AlexNet comme dans le guide étudiant
             nn.Conv2d(1, 16, kernel_size=5, stride=1, padding=2),
+            nn.BatchNorm2d(16),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
+
             nn.Conv2d(16, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
+
             nn.Conv2d(32, 64, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
+
             nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
+
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
+
             nn.Linear(1152, 128),
             nn.ReLU(inplace=True),
             nn.Linear(128, 128),
@@ -56,22 +65,31 @@ class AlexNet_detect(nn.Module):
         self.model = nn.Sequential(
             # AlexNet comme dans le guide étudiant
             nn.Conv2d(1, 16, kernel_size=9, stride=1, padding=3),
+            nn.BatchNorm2d(16),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
+
             nn.Conv2d(16, 32, kernel_size=7, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
             nn.MaxPool2d(kernel_size=2, stride=2),
+
             nn.Conv2d(32, 64, kernel_size=5, stride=1, padding=1),
+            nn.BatchNorm2d(64),
             nn.ReLU(inplace=True),
+
             nn.Conv2d(64, 32, kernel_size=3, stride=1, padding=1),
+            nn.BatchNorm2d(32),
             nn.ReLU(inplace=True),
+
             nn.MaxPool2d(kernel_size=2, stride=2),
             nn.Flatten(),
+
             nn.Linear(512, 256),
             nn.ReLU(inplace=True),
             nn.Linear(256, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS*7),
+            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS * 7),
             nn.Sigmoid()
         )
 
@@ -111,27 +129,27 @@ class ARCHITECTURE_segmentation(nn.Module):
 
         # Encodeur
         self.enc1 = nn.Sequential(
-            nn.Conv2d(1, 32, 3, padding=1), nn.ReLU(inplace=True), nn.MaxPool2d(2)
+            nn.Conv2d(1, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(inplace=True), nn.MaxPool2d(2)
         )
         self.enc2 = nn.Sequential(
-            nn.Conv2d(32, 64, 3, padding=1), nn.ReLU(inplace=True), nn.MaxPool2d(2)
+            nn.Conv2d(32, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True), nn.MaxPool2d(2)
         )
         self.enc3 = nn.Sequential(
-            nn.Conv2d(64, 128, 3, padding=1), nn.ReLU(inplace=True)
+            nn.Conv2d(64, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(inplace=True)
         )
 
         # Bottleneck
         self.bottleneck = nn.Sequential(
-            nn.Conv2d(128, 256, 3, padding=1), nn.ReLU(inplace=True),
-            nn.Conv2d(256, 128, 3, padding=1), nn.ReLU(inplace=True)
+            nn.Conv2d(128, 256, 3, padding=1), nn.BatchNorm2d(256), nn.ReLU(inplace=True),
+            nn.Conv2d(256, 128, 3, padding=1), nn.BatchNorm2d(128), nn.ReLU(inplace=True)
         )
 
         # Décodeur
         self.up1 = nn.ConvTranspose2d(128, 64, 2, stride=2)
-        self.dec1 = nn.Sequential(nn.Conv2d(64 + 128, 64, 3, padding=1), nn.ReLU(inplace=True))
+        self.dec1 = nn.Sequential(nn.Conv2d(64 + 128, 64, 3, padding=1), nn.BatchNorm2d(64), nn.ReLU(inplace=True))
 
         self.up2 = nn.ConvTranspose2d(64, 32, 2, stride=2)
-        self.dec2 = nn.Sequential(nn.Conv2d(32 + 32, 32, 3, padding=1), nn.ReLU(inplace=True))
+        self.dec2 = nn.Sequential(nn.Conv2d(32 + 32, 32, 3, padding=1), nn.BatchNorm2d(32), nn.ReLU(inplace=True))
 
         # Sortie
         self.output = nn.Conv2d(32, num_classes, 1)
