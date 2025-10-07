@@ -49,9 +49,9 @@ class AlexNet_class(nn.Module):
 
             nn.Linear(1152, 128),
             nn.ReLU(inplace=True),
-            nn.Linear(128, 128),
+            nn.Linear(128, 64),
             nn.ReLU(inplace=True),
-            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS),
+            nn.Linear(64, SEGMENTATION_BACKGROUND_CLASS),
             # nn.Sigmoid()
         )
 
@@ -87,9 +87,9 @@ class AlexNet_detect(nn.Module):
 
             nn.Linear(512, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(256, 128),
+            nn.Linear(256, 256),
             nn.ReLU(inplace=True),
-            nn.Linear(128, SEGMENTATION_BACKGROUND_CLASS * 7),
+            nn.Linear(256, SEGMENTATION_BACKGROUND_CLASS * 7),
             nn.Sigmoid()
         )
 
@@ -101,7 +101,7 @@ class AlexNet_detect(nn.Module):
 
 
 class Loss_Detection(nn.Module):
-    def __init__(self, lam_detect = 3.0, lam_coord = 1.0, lam_class = 2.0):
+    def __init__(self, lam_detect = 2.0, lam_coord = 5.0, lam_class = 3.0):
         super(Loss_Detection, self).__init__()
         self.lam_detect = lam_detect
         self.lam_coord = lam_coord
